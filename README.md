@@ -1,0 +1,5 @@
+netCS
+=====
+
+Usage:
+make && ./sr
