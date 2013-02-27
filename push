@@ -4,6 +4,6 @@ if [ -z $MESSAGE ]
   then
     MESSAGE='Undocumented'
 fi
-git add -A
+git add -A &&
 git commit -m $MESSAGE &&
 git push git@github.com:orland0m/netCS.git
