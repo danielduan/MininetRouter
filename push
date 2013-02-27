@@ -6,4 +6,5 @@ if [ -z $MESSAGE ]
 fi
 git add -A &&
 git commit -m $MESSAGE &&
+git pull git@github.com:orland0m/netCS.git &&
 git push git@github.com:orland0m/netCS.git
