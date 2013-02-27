@@ -6,4 +6,4 @@ if [ -z $MESSAGE ]
 fi
 git add .
 git commit -m $MESSAGE &&
-git push origin master
+git push git@github.com:orland0m/netCS.git
