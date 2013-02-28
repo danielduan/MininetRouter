@@ -1,5 +1,5 @@
 #!/bin/sh
-echo "hello world"
+
 #sends 30 ping packets to ip address passed in as first argument.
 
 if [ $# -ne 1 ]
