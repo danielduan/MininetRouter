@@ -32,6 +32,9 @@
 #include "sr_dumper.h"
 #include "sr_router.h"
 #include "sr_rt.h"
+#include <iostream>
+
+using namespace std;
 
 extern char* optarg;
 
@@ -40,9 +43,9 @@ extern char* optarg;
 
 #define VERSION_INFO "VNS sr stub code revised 2009-10-14 (rev 0.20)"
 #define DEFAULT_PORT 8888
-#define DEFAULT_HOST "vrhost"
-#define DEFAULT_SERVER "localhost"
-#define DEFAULT_RTABLE "rtable"
+#define DEFAULT_HOST (char *)"vrhost"
+#define DEFAULT_SERVER (char *)"localhost"
+#define DEFAULT_RTABLE (char *)"rtable")
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
@@ -149,7 +152,7 @@ int main(int argc, char **argv)
 
     if(_template != NULL && strcmp(rtable, "rtable.vrhost") == 0) { /* we've recv'd the rtable now, so read it in */
         Debug("Connected to new instantiation of topology template %s\n", _template);
-        sr_load_rt_wrap(&sr, "rtable.vrhost");
+        sr_load_rt_wrap(&sr, (char *)"rtable.vrhost");
     }
     else {
       /* Read from specified routing table */

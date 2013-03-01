@@ -220,7 +220,7 @@ int sr_arpcache_destroy(struct sr_arpcache *cache) {
 /* Thread which sweeps through the cache and invalidates entries that were added
    more than SR_ARPCACHE_TO seconds ago. */
 void *sr_arpcache_timeout(void *sr_ptr) {
-    struct sr_instance *sr = sr_ptr;
+    struct sr_instance *sr = (struct sr_instance *) sr_ptr;
     struct sr_arpcache *cache = &(sr->cache);
     
     while (1) {

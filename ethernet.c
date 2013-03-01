@@ -59,23 +59,23 @@ void EthernetFrame::SetPayload(string str){
 }
 
 string EthernetFrame::GetPacket(){
-
+	return "";
 }
 
 size_t EthernetFrame::GetLength(){
-
+	return 0;
 }
 
 string EthernetFrame::GetDestAddress(){
-
+	return "";
 }
 
 string EthernetFrame::GetSrcAddress(){
-
+	return "";
 }
 
 string EthernetFrame::GetPayload(){
-
+	return "";
 }
 
 int EthernetFrame::IsValid(){

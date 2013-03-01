@@ -6,7 +6,7 @@
 
 
 uint16_t cksum (const void *_data, int len) {
-  const uint8_t *data = _data;
+  const uint8_t *data = (const uint8_t*)_data;
   uint32_t sum;
 
   for (sum = 0;len >= 2; data += 2, len -= 2)
@@ -145,7 +145,7 @@ void print_hdrs(uint8_t *buf, uint32_t length) {
 
   /* Ethernet */
   int minlength = sizeof(sr_ethernet_hdr_t);
-  if (length < minlength) {
+  if (length < (uint32_t) minlength) {
     fprintf(stderr, "Failed to print ETHERNET header, insufficient length\n");
     return;
   }
@@ -155,7 +155,7 @@ void print_hdrs(uint8_t *buf, uint32_t length) {
 
   if (ethtype == ethertype_ip) { /* IP */
     minlength += sizeof(sr_ip_hdr_t);
-    if (length < minlength) {
+    if (length < (uint32_t) minlength) {
       fprintf(stderr, "Failed to print IP header, insufficient length\n");
       return;
     }
@@ -165,7 +165,7 @@ void print_hdrs(uint8_t *buf, uint32_t length) {
 
     if (ip_proto == ip_protocol_icmp) { /* ICMP */
       minlength += sizeof(sr_icmp_hdr_t);
-      if (length < minlength)
+      if (length < (uint32_t) minlength)
         fprintf(stderr, "Failed to print ICMP header, insufficient length\n");
       else
         print_hdr_icmp(buf + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -173,7 +173,7 @@ void print_hdrs(uint8_t *buf, uint32_t length) {
   }
   else if (ethtype == ethertype_arp) { /* ARP */
     minlength += sizeof(sr_arp_hdr_t);
-    if (length < minlength)
+    if (length < (uint32_t) minlength)
       fprintf(stderr, "Failed to print ARP header, insufficient length\n");
     else
       print_hdr_arp(buf + sizeof(sr_ethernet_hdr_t));
