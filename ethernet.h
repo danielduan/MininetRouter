@@ -1,11 +1,8 @@
 #ifndef _ETHERNET_
 #define _ETHERNET_
 
-/** NOTE: The layout of the ethernet frame used in this module is posted in the following blog:
-https://communities.netapp.com/blogs/ethernetstorageguy/2009/09/12/anatomy-of-an-ethernet-frame
-preamble|dest|source|length|payload|CRC
-*/
-
+#include <iostream>
+using namespace std;
 
 /**
 EthernetFrame: CLASS
@@ -17,19 +14,23 @@ EthernetFrame frame3 = new EthernetFrame();
 			  frame3.SetSource(source);
 	          frame3.SetDest(dest);
 	          frame3.SetPayload(payload);
-Any of those methods will create a proper Ethernet frame, and it can be retrieved by
+Any of those contains a proper Ethernet frame, and it can be retrieved by
 calling frameN.GetPacket();
+
+NOTE: The layout of the ethernet frame used in this module is as defined in this wiki:
+http://wiki.wireshark.org/Ethernet
+dest|source|length|payload|CRC
+
+LIMITATION: Parsing will fail with frames where the payload length is greater than 1500 (jumbo frames)
 */
 class EthernetFrame{
 	private:
-	uint8_t * raw_packet;
-	unsigned int length;
-	string preamble;
+	string rawPacket;
+	size_t payloadLength;
 	string destination;
 	string source;
 	string payload;
-	strinc CRC;
-	void calculateCRC();
+	uint16_t FCS;
 	public:
 	/**
 		Default constructor
@@ -42,7 +43,7 @@ class EthernetFrame{
 		Constructor: packet, length
 		-- Parse received packet
 	*/
-	EthernetFrame(uint8_t *, int);
+	EthernetFrame(uint8_t *, size_t);
 	
 	/**
 		Constructor: source, dest, payload
@@ -73,17 +74,12 @@ class EthernetFrame{
 		-- Will return a properly formated Ethernet frame, if any of its required fields is
 		uninitialized it will pad with zeros
 	*/
-	uint8_t * GetPacket();
+	string GetPacket();
 	
 	/**
 		GetLength: returns the length field that's contained in the packet this object represents
 	*/
-	unsigned int GetLength();
-	
-	/**
-		GetPreamble: returns the preamble field that's contained in the packet this object represents
-	*/
-	string GetPreamble();
+	size_t GetLength();
 	
 	/**
 		GetDestAddress: returns the destination address field that's contained in the packet this object represents
@@ -103,7 +99,12 @@ class EthernetFrame{
 	/**
 		GetCR:C returns the CRC field that's contained in the packet this object represents
 	*/
-	string GetCRC();
-}
+	uint16_t GetFCS();
+	
+	/**
+		IsValid: returns a flag, true if the there are no errors in the packet represented by this object
+	*/
+	int IsValid();
+};
 
 #endif
