@@ -2,6 +2,7 @@
 #define _ETHERNET_
 
 #include <iostream>
+#include <stdint.h>
 using namespace std;
 
 /**
