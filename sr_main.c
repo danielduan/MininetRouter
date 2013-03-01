@@ -45,7 +45,7 @@ extern char* optarg;
 #define DEFAULT_PORT 8888
 #define DEFAULT_HOST (char *)"vrhost"
 #define DEFAULT_SERVER (char *)"localhost"
-#define DEFAULT_RTABLE (char *)"rtable")
+#define DEFAULT_RTABLE (char *)"rtable"
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
