@@ -3,42 +3,31 @@
 
 #include <iostream>
 #include <stdint.h>
+#include <stdio.h>
 using namespace std;
+enum packet_type{ BAD_PACKET, IP_PACKET, ARP_PACKET };
 
 /**
 EthernetFrame: CLASS
 This class will parse/create an Ethernet frame object and will split/initialize its fields.
 USAGE:
 EthernetFrame frame1 = new EthernetFrame(raw_packet, length);
-EthernetFrame frame2 = new EthernetFrame(source, destination, payload);
-EthernetFrame frame3 = new EthernetFrame();
-			  frame3.SetSource(source);
-	          frame3.SetDest(dest);
-	          frame3.SetPayload(payload);
-Any of those contains a proper Ethernet frame, and it can be retrieved by
-calling frameN.GetPacket();
+EthernetFrame frame2 = new EthernetFrame(source, destination, payload, payloadLength, type);
 
-NOTE: The layout of the ethernet frame used in this module is as defined in this wiki:
-http://wiki.wireshark.org/Ethernet
-dest|source|length|payload|CRC
+NOTE: The layout of the ethernet frame used in this module isn't a full ethernet frame, but instead:
+dest|source|type|payload
 
 LIMITATION: Parsing will fail with frames where the payload length is greater than 1500 (jumbo frames)
 */
 class EthernetFrame{
 	private:
-	string rawPacket;
+	uint8_t * rawPacket;
 	size_t payloadLength;
-	string destination;
-	string source;
-	string payload;
-	uint16_t FCS;
+	uint8_t destination[6];
+	uint8_t source[6];
+	uint8_t * payload;
+	enum packet_type type;
 	public:
-	/**
-		Default constructor
-		-- Will be used to create a response that will be assembled in various steps
-		e.g. create object, SetSource, SetDest, and SetPayload
-	*/
-	EthernetFrame();
 	
 	/**
 		Constructor: packet, length
@@ -46,66 +35,52 @@ class EthernetFrame{
 	*/
 	EthernetFrame(uint8_t *, size_t);
 	
+	~EthernetFrame();
+	
 	/**
-		Constructor: source, dest, payload
+		Constructor: source, dest, payload, payload length, type
 		-- Create response in one step
 	*/
-	EthernetFrame(string, string, string);
-	
-	/**
-		SetSource: set the source address this packet will contain
-		-- Will recalculate CRC
-	*/
-	void SetSource(string);
-	
-	/**
-		SetDest: set the destination address this packet will contain
-		-- Will recalculate of CRC
-	*/
-	void SetDest(string);
-	
-	/**
-		SetPayload: set the payload that will be contained in the packet
-		-- Will update length, and will recalculate CRC
-	*/
-	void SetPayload(string);
+	EthernetFrame(uint8_t *, uint8_t *, uint8_t *, size_t, enum packet_type);
 		
 	/**
 		GetPacket: returns packet that's ready to be sent through the wire
 		-- Will return a properly formated Ethernet frame, if any of its required fields is
 		uninitialized it will pad with zeros
 	*/
-	string GetPacket();
-	
-	/**
-		GetLength: returns the length field that's contained in the packet this object represents
-	*/
-	size_t GetLength();
+	uint8_t * GetPacket();
 	
 	/**
 		GetDestAddress: returns the destination address field that's contained in the packet this object represents
 	*/
-	string GetDestAddress();
+	uint8_t * GetDestAddress();
 	
 	/**
 		GetSrcAddress: returns the source address field that's contained in the packet this object represents
 	*/
-	string GetSrcAddress();
+	uint8_t * GetSrcAddress();
 	
 	/**
 		GetPayload: returns the payload field that's contained in the packet this object represents
 	*/
-	string GetPayload();
+	uint8_t * GetPayload();
 	
 	/**
-		GetCR:C returns the CRC field that's contained in the packet this object represents
+		GetType: returns -1 on error, 0=IP, 1 = ARP
 	*/
-	uint16_t GetFCS();
+	enum packet_type GetType();
+	
+	/**
+		Length: returns the length of the payload
+	*/
+	size_t length();
 	
 	/**
 		IsValid: returns a flag, true if the there are no errors in the packet represented by this object
 	*/
 	int IsValid();
 };
+
+void print_hex(uint8_t *s, size_t len, size_t p_eth);
 
 #endif

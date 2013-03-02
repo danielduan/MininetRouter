@@ -22,6 +22,8 @@
 #include "sr_arpcache.h"
 #include "sr_utils.h"
 
+#include "ethernet.h"
+
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -79,6 +81,18 @@ void sr_handlepacket(struct sr_instance* sr,
   printf("*** -> Received packet of length %d \n",len);
 
   /* fill in code here */
-
+  
+	EthernetFrame * frame = new EthernetFrame(packet, len);
+	
+	if(frame->IsValid()){
+		cout << "Payload: " << endl;
+		print_hex(frame->GetPayload(), frame->length(), 0);// the last argument makes the function print 32 bytes per line
+		EthernetFrame * tmp = new EthernetFrame(frame->GetSrcAddress(), frame->GetDestAddress(), 
+			frame->GetPayload(), frame->length(), frame->GetType());
+		cout << "Newly created: " << endl;
+		print_hex(tmp->GetPacket(), tmp->length()+14, 1);// the last argument makes the function give a little format to an ethernet frame
+		delete frame;
+		delete tmp;
+	}
 }/* end sr_ForwardPacket */
 

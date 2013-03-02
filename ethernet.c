@@ -1,5 +1,5 @@
-#include "ethernet.h" /* EthernetFrame Prototype */
-#include "sr_utils.h" /* cksum */
+#include "ethernet.h" /* EthernetFrame class prototype */
+#include "sr_utils.h"
 #include <iostream>
 #include <stdio.h>
 #include <string.h>
@@ -7,80 +7,99 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <errno.h>
+
 using namespace std;
 
-/*
-	string rawPacket;
-	size_t payloadLength;
-	string destination;
-	string source;
-	string payload;
-	uint16_t FCS;
-*/
-
 EthernetFrame::EthernetFrame(uint8_t * packet, size_t len){
-	rawPacket = "";
-	if(len<64||len>1518) return; // Invalid ethernet packet
-	char * tmp = new char[len];
-	memcpy(tmp, packet, len);
-	rawPacket = string(tmp);
-	delete tmp;
-	destination = rawPacket.substr(0,6);
-	source = rawPacket.substr(6,12);
-	payloadLength = (size_t) atoi(rawPacket.substr(12,14).c_str());
-	if(rawPacket.length()<(14+payloadLength+4)){ // incomplete packet
-		rawPacket = ""; 
+	rawPacket = NULL;
+	if(len<14){
+		type = BAD_PACKET;
+		cerr << "Incomplete ethernet packet" << endl;
 		return;
 	}
-	payload = rawPacket.substr(14,payloadLength);
-	FCS = (uint16_t) atoi(rawPacket.substr(payloadLength, payloadLength+4).c_str());
+	if(packet[12]==0x08&&packet[13]==0x06){
+		type = ARP_PACKET;
+	}else if(packet[12]==0x08&&packet[13]==0x00){
+		type = IP_PACKET;
+	}else{
+		type = BAD_PACKET;
+		return;
+	}
+	rawPacket = new uint8_t[len];
+	memcpy(rawPacket, packet, len);
+	memcpy(destination, rawPacket, 6);
+	memcpy(source, rawPacket+6, 6);
+	payloadLength = len - 14;
+	payload = packet+14;
 }
 
-EthernetFrame::EthernetFrame(string dst, string src, string pld){
-	
+EthernetFrame::EthernetFrame(uint8_t * dest, uint8_t * source, uint8_t * payload, size_t length, enum packet_type it){
+	rawPacket = NULL;
+	memcpy(destination,dest,6);
+	memcpy(this->source, source, 6);
+	this->payload = new uint8_t[length];
+	memcpy(this->payload, payload, length);
+	payloadLength = length;
+	this->type = it;
 }
 
-EthernetFrame::EthernetFrame(){
-
+uint8_t * EthernetFrame::GetPacket(){
+	if(!IsValid()) return NULL;
+	if(rawPacket){
+		delete rawPacket;
+	}
+	uint8_t tmp[2];
+	rawPacket = new uint8_t[payloadLength+14];
+	memcpy(rawPacket, destination, 6);
+	memcpy(rawPacket+6, source, 6);
+	if(type==IP_PACKET){
+		tmp[0]=0x08;
+		tmp[1]=0x00;
+	}else{
+		tmp[0]=0x08;
+		tmp[1]=0x06;
+	}
+	memcpy(rawPacket+12,tmp,2);
+	memcpy(rawPacket+14, payload, payloadLength);
+	return rawPacket;
 }
 
-uint16_t EthernetFrame::GetFCS(){
-	return cksum(payload.c_str(), payload.length());
+size_t EthernetFrame::length(){
+	return payloadLength;
 }
 
-void EthernetFrame::SetSource(string str){
-
+uint8_t * EthernetFrame::GetDestAddress(){
+	return destination;
 }
 
-void EthernetFrame::SetDest(string str){
-
+uint8_t * EthernetFrame::GetSrcAddress(){
+	return source;
 }
 
-void EthernetFrame::SetPayload(string str){
-
-}
-
-string EthernetFrame::GetPacket(){
-	return "";
-}
-
-size_t EthernetFrame::GetLength(){
-	return 0;
-}
-
-string EthernetFrame::GetDestAddress(){
-	return "";
-}
-
-string EthernetFrame::GetSrcAddress(){
-	return "";
-}
-
-string EthernetFrame::GetPayload(){
-	return "";
+uint8_t * EthernetFrame::GetPayload(){
+	return payload;
 }
 
 int EthernetFrame::IsValid(){
-	if(rawPacket.length()<64) return 0;
-	return this->GetFCS()==FCS;
+	return type!=BAD_PACKET;
+}
+
+enum packet_type EthernetFrame::GetType(){
+	return type;
+}
+
+EthernetFrame::~EthernetFrame(){
+	if(rawPacket){
+		delete rawPacket;
+	}
+}
+
+void print_hex(uint8_t *s, size_t len, size_t p_eth) {
+    for(size_t i = 0; i < len; i++) {
+        printf("%02x ", s[i]);
+        if(p_eth)
+        if(i==5||i==11||i==13||(i!=0&&i%32==0)) printf("\n");
+    }
+    printf("\n");
 }
