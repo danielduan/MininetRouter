@@ -10,10 +10,12 @@
 #include "ethernet.h" /* EthernetFrame */
 #include "sr_router.h" /* sr_instance */
 #include "sr_protocol.h" /* sr_arp_hdr_t */
-
+#include "router-utils.h" /* get_int, get_short, get_char */
+#include "sr_rt.h" /* routing table */
 using namespace std;
 
 /**
+
 struct sr_arp_hdr
 {
     unsigned short  ar_hrd;             		format of hardware address   
@@ -28,16 +30,17 @@ struct sr_arp_hdr
 } __attribute__ ((packed)) ;
 */
 
-uint32_t get_int(uint8_t * point){
-	return (uint32_t)((point[0]<<24)|(point[1]<<16)|(point[2]<<8)|(point[3]));
-}
-
-unsigned short get_short(uint8_t * point){
-	return (unsigned short)((point[0]<<8)|(point[1]));
-}
-
-unsigned char get_char(uint8_t * point){
-	return (unsigned char)(point[0]);
+uint8_t * new_arp_response(sr_arp_hdr_t * arp){
+	uint8_t * response = new uint8_t[42];
+	memcpy(response, arp->ar_tha, 6);
+	memcpy(response+6, arp->ar_sha, 6);
+	uint8_t tmp1[] = {0x08, 0x06, 0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x02};
+	memcpy(response+12, tmp1, 10);
+	memcpy(response+22, arp->ar_sha, 6);
+	memcpy(response+28, (void *)(&(arp->ar_sip)), 4);
+	memcpy(response+32, arp->ar_tha, 6);
+	memcpy(response+38, (void *)(&(arp->ar_tip)), 4);
+	return response;
 }
 
 sr_arp_hdr_t * new_arp_packet(EthernetFrame * frame){
@@ -56,48 +59,41 @@ sr_arp_hdr_t * new_arp_packet(EthernetFrame * frame){
 	return arp;
 }//*/
 
-int i=0;
+/*
+struct sr_if
+{
+  char name[sr_IFACE_NAMELEN];
+  unsigned char addr[ETHER_ADDR_LEN];
+  uint32_t ip;
+  uint32_t speed;
+  struct sr_if* next;
+};
+*/
+
 void handle_arp(struct sr_instance * sr , EthernetFrame * frame, char * interface){
 	sr_arp_hdr_t * arp = new_arp_packet(frame);
+	if(!arp){
+		cerr << "ARP: Couldn't allocate memory" << endl;
+		return;
+	}
 	if(arp->ar_op==1){
-		cout << "ARP: Request" << hex << endl;
+		cout << "ARP: Request" << endl;
+		struct sr_if * i_entry = interface_match(sr->if_list, arp->ar_tip);
+		if(i_entry){
+			cout << "ARP: Destined to router interface" << endl;
+			arp->ar_op = 2;
+			memcpy(arp->ar_tha, arp->ar_sha, 6);
+			arp->ar_tip = flip_ip(arp->ar_sip);
+			memcpy(arp->ar_sha, i_entry->addr, 6);
+			arp->ar_sip = i_entry->ip;
+			uint8_t * response = new_arp_response(arp);
+			cout << "ARP: Responding"<<endl;
+			sr_send_packet(sr, response, 42, i_entry->name);
+		}
 	}else if(arp->ar_op==2){
 		cout << "ARP: Response" << endl;
 	}else{
 		cerr << "ARP: Invalid OP code"<< endl;
 	}
-	if(arp){
-		delete arp;
-	}
+	delete arp;
 }
-/*
-
-Ethernet frame: Request
-ff ff ff ff ff ff		Destination
-9a 4b 8d 53 aa 98		Source
-08 06					Ethertype
-
-00 01 					hardware type
-08 00 					protocol type (IP)
-06 						Length of hardware address
-04 						Length of protocol address
-00 01					Opcode 1 (ARP request)
-9a 4b 8d 53 aa 98		Sender's hardware address
-0a 00 01 64 			Sender's protocol address (IP)
-00 00 00 00 00 00 		Target hardware address
-0a 00 01 01				Target protocol address (IP)
-
-Ethernet frame: Response
-9a 4b 8d 53 aa 98		Destination (Source of request)
-00 90 27 3c 66 e1		Source (the host that's responding this request)
-08 06					Ethertype
-*00 01					Hardware type
-08 00 					protocol type (IP)
-06 						Length of hardware address
-04 						Length of protocol address
-00 02					Opcode 2 (ARP reply)
-00 90 27 3c 66 e1		Senders hardware address
-0a 00 01 01				Sendet's protocol address
-9a 4b 8d 53 aa 98		Target hardware address
-0a 00 01 64				Target protocol address
-*/

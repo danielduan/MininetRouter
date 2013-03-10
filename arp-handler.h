@@ -11,9 +11,4 @@
 void handle_arp(struct sr_instance *, EthernetFrame *, char *);
 
 
-/**
-	get_arp_header: build a structure containing the parsed ARP packet 
-*/
-sr_arp_hdr_t * get_arp_header(EthernetFrame *);
-
 #endif

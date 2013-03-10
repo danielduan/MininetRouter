@@ -75,18 +75,15 @@ void sr_handlepacket(struct sr_instance* sr,
         char* interface/* lent */)
 {
   /* REQUIRES */
-  assert(sr);
-  assert(packet);
-  assert(interface);
+	assert(sr);
+	assert(packet);
+	assert(interface);
+	printf("*** -> Received packet of length %d \n",len);
 
-  printf("*** -> Received packet of length %d \n",len);
-
-  /* fill in code here */
-  
+	/* fill in code here */
 	EthernetFrame * frame = new EthernetFrame(packet, len);
 	switch(frame->GetType()){
 		case ARP_PACKET:
-			//print_hex(frame->GetPacket(), frame->PayloadLength()+14, 1);
 			handle_arp(sr, frame, interface);
 			break;
 		case IP_PACKET:
@@ -95,14 +92,6 @@ void sr_handlepacket(struct sr_instance* sr,
 		default:
 			cerr << "Not a packet" << endl;
 	}
-	delete frame;/*
-		cout << "Payload: " << endl;
-		print_hex(frame->GetPayload(), frame->PayloadLength(), 0);// the last argument makes the function print 32 bytes per line
-		EthernetFrame * tmp = new EthernetFrame(frame->GetSrcAddress(), frame->GetDestAddress(), 
-			frame->GetPayload(), frame->PayloadLength(), frame->GetType());
-		cout << "Newly created: " << endl;
-		print_hex(tmp->GetPacket(), tmp->PayloadLength()+14, 1);// the last argument makes the function give a little format to an ethernet frame
-		delete frame;
-		delete tmp;//*/
+	delete frame;
 }/* end sr_ForwardPacket */
 
