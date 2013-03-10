@@ -12,12 +12,11 @@ EthernetFrame: CLASS
 This class will parse/create an Ethernet frame object and will split/initialize its fields.
 USAGE:
 EthernetFrame frame1 = new EthernetFrame(raw_packet, length);
-EthernetFrame frame2 = new EthernetFrame(source, destination, payload, payloadLength, type);
+EthernetFrame frame2 = new EthernetFrame(source, destination, payload, payloadLength, packet_type);
 
 NOTE: The layout of the ethernet frame used in this module isn't a full ethernet frame, but instead:
 dest|source|type|payload
 
-LIMITATION: Parsing will fail with frames where the payload length is greater than 1500 (jumbo frames)
 */
 class EthernetFrame{
 	private:
@@ -66,14 +65,14 @@ class EthernetFrame{
 	uint8_t * GetPayload();
 	
 	/**
-		GetType: returns -1 on error, 0=IP, 1 = ARP
+		GetType: returns BAD_PACKET, IP_PACKET , ARP_PACKET
 	*/
 	enum packet_type GetType();
 	
 	/**
 		Length: returns the length of the payload
 	*/
-	size_t length();
+	size_t PayloadLength();
 	
 	/**
 		IsValid: returns a flag, true if the there are no errors in the packet represented by this object

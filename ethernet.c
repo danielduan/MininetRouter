@@ -65,7 +65,7 @@ uint8_t * EthernetFrame::GetPacket(){
 	return rawPacket;
 }
 
-size_t EthernetFrame::length(){
+size_t EthernetFrame::PayloadLength(){
 	return payloadLength;
 }
 

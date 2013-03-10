@@ -23,6 +23,7 @@
 #include "sr_utils.h"
 
 #include "ethernet.h"
+#include "arp-handler.h"
 
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
@@ -83,16 +84,25 @@ void sr_handlepacket(struct sr_instance* sr,
   /* fill in code here */
   
 	EthernetFrame * frame = new EthernetFrame(packet, len);
-	
-	if(frame->IsValid()){
-		cout << "Payload: " << endl;
-		print_hex(frame->GetPayload(), frame->length(), 0);// the last argument makes the function print 32 bytes per line
-		EthernetFrame * tmp = new EthernetFrame(frame->GetSrcAddress(), frame->GetDestAddress(), 
-			frame->GetPayload(), frame->length(), frame->GetType());
-		cout << "Newly created: " << endl;
-		print_hex(tmp->GetPacket(), tmp->length()+14, 1);// the last argument makes the function give a little format to an ethernet frame
-		delete frame;
-		delete tmp;
+	switch(frame->GetType()){
+		case ARP_PACKET:
+			//print_hex(frame->GetPacket(), frame->PayloadLength()+14, 1);
+			handle_arp(sr, frame, interface);
+			break;
+		case IP_PACKET:
+			cout << "IP packet" << endl;
+			break;
+		default:
+			cerr << "Not a packet" << endl;
 	}
+	delete frame;/*
+		cout << "Payload: " << endl;
+		print_hex(frame->GetPayload(), frame->PayloadLength(), 0);// the last argument makes the function print 32 bytes per line
+		EthernetFrame * tmp = new EthernetFrame(frame->GetSrcAddress(), frame->GetDestAddress(), 
+			frame->GetPayload(), frame->PayloadLength(), frame->GetType());
+		cout << "Newly created: " << endl;
+		print_hex(tmp->GetPacket(), tmp->PayloadLength()+14, 1);// the last argument makes the function give a little format to an ethernet frame
+		delete frame;
+		delete tmp;//*/
 }/* end sr_ForwardPacket */
 

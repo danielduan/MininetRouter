@@ -5,6 +5,9 @@
 # 
 # (c) 2001,2000 Stanford University
 #
+# Modified by Orlando Miramontes at UCLA, orland0m@ucla.edu
+# changed to C++ compiler, added source files
+#
 #------------------------------------------------------------------------------
 
 all : sr
@@ -40,11 +43,11 @@ PURIFY= purify ${PFLAGS}
 
 # Add any header files you've added here
 sr_HDRS = sr_arpcache.h sr_utils.h sr_dumper.h sr_if.h sr_protocol.h sr_router.h sr_rt.h  \
-          vnscommand.h sha1.h ethernet.h
+          vnscommand.h sha1.h ethernet.h arp-handler.h
 
 # Add any source files you've added here
 sr_SRCS = sr_router.c sr_main.c sr_if.c sr_rt.c sr_vns_comm.c sr_utils.c sr_dumper.c  \
-          sr_arpcache.c sha1.c ethernet.c
+          sr_arpcache.c sha1.c ethernet.c arp-handler.c
 
 sr_OBJS = $(patsubst %.c,%.o,$(sr_SRCS))
 sr_DEPS = $(patsubst %.c,.%.d,$(sr_SRCS))
