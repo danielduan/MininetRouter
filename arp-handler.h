@@ -8,7 +8,11 @@
 /**
 	handle_arp: handle all incoming ARP packets
 */
-void handle_arp(struct sr_instance *, EthernetFrame *, char *);
+void handle_arp_packet(struct sr_instance *, EthernetFrame *, char *);
 
-
+/**
+	require_arp: Sends responses back using data in cache, or sends arp request if
+	there is no entry for the request passed
+*/
+void require_arp(struct sr_instance *,  struct sr_arpreq *);
 #endif

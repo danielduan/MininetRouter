@@ -31,8 +31,14 @@ uint32_t flip_ip(uint32_t);
 */
 struct sr_if* interface_match(struct sr_if*, uint32_t);
 
+/**
+	interface_by_name: returns the table row that matches the given name, null otherwise
+*/
+struct sr_if* interface_search_by_name(struct sr_if*, char *);
+
 /**    
 	longest_match: returns the table row that matches the given IP, null otherwise
+	The ip will be flipped due to the technical detail mentioned in flip_ip()
 */
 struct sr_rt* longest_match(struct sr_rt*, uint32_t);
 

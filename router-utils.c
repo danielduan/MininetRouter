@@ -2,6 +2,7 @@
 #include "sr_rt.h"
 #include <stdint.h>
 #include <iostream>
+#include <string.h>
 
 using namespace std;
 uint32_t get_int(uint8_t * point){
@@ -21,6 +22,17 @@ uint32_t flip_ip(uint32_t ip){
 	return (uint32_t)((ip>>24)|((ip&0xFF0000)>>8)|((ip&0xFF00)<<8)|(ip<<24));
 }
 
+struct sr_if* interface_search_by_name(struct sr_if* list, char *search){
+	if(list){
+		if(strcmp(list->name, search)==0){
+			return list;
+		}else{
+			return interface_search_by_name(list->next, search);
+		}
+	}
+	return NULL;
+}
+
 struct sr_if * interface_match(struct sr_if * list, uint32_t ip){
 	if(list){
 		if(flip_ip(ip)==list->ip){
@@ -38,8 +50,7 @@ struct sr_rt* longest_match_aux(struct sr_rt* routing_table, uint32_t ip, struct
 		uint32_t possible = ip & routing_table->mask.s_addr;
 		if(prefix==possible){
 			if(found){
-				uint32_t tmp_prefix = found->dest.s_addr & found->mask.s_addr;
-				if(tmp_prefix>prefix){
+				if(found->mask.s_addr>routing_table->mask.s_addr){
 					return longest_match_aux(routing_table->next, ip, found);
 				}else{
 					return longest_match_aux(routing_table->next, ip, routing_table);

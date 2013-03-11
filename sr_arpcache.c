@@ -10,14 +10,32 @@
 #include "sr_router.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
+#include "arp-handler.h"
 
 /* 
   This function gets called every second. For each request sent out, we keep
   checking whether we should resend an request or destroy the arp request.
   See the comments in the header file for an idea of what it should look like.
+
+struct sr_arpreq {
+    uint32_t ip;
+    time_t sent;                Last time this ARP request was sent. You 
+                                   should update this. If the ARP request was 
+                                   never sent, will be 0. 
+    uint32_t times_sent;       Number of times this request was sent. You 
+                                   should update this. 
+    struct sr_packet *packets;  List of pkts waiting on this req to finish
+    struct sr_arpreq *next;
+};
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-    /* Fill this in */
+	struct sr_arpcache * cache = &sr->cache;
+	pthread_mutex_lock(&(cache->lock));
+	struct sr_arpreq * req;
+	for (req = cache->requests; req != NULL; req = req->next) {
+		require_arp(sr, req);
+	}
+	pthread_mutex_unlock(&(cache->lock));
 }
 
 /* You should not need to touch the rest of this code. */

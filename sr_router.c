@@ -23,6 +23,7 @@
 #include "sr_utils.h"
 
 #include "ethernet.h"
+#include "router-utils.h"
 #include "arp-handler.h"
 
 /*---------------------------------------------------------------------
@@ -69,6 +70,28 @@ void sr_init(struct sr_instance* sr)
  *
  *---------------------------------------------------------------------*/
 
+/**
+struct sr_rt
+{
+    struct in_addr dest;
+    struct in_addr gw;
+    struct in_addr mask;
+    char   interface[sr_IFACE_NAMELEN];
+    struct sr_rt* next;
+};
+
+struct sr_arpreq {
+    uint32_t ip;
+    time_t sent;              Last time this ARP request was sent. You 
+                                   should update this. If the ARP request was 
+                                   never sent, will be 0. 
+    uint32_t times_sent;        Number of times this request was sent. You 
+                                   should update this. 
+    struct sr_packet *packets;  List of pkts waiting on this req to finish 
+    struct sr_arpreq *next;
+};
+*/
+
 void sr_handlepacket(struct sr_instance* sr,
         uint8_t * packet/* lent */,
         unsigned int len,
@@ -84,11 +107,29 @@ void sr_handlepacket(struct sr_instance* sr,
 	EthernetFrame * frame = new EthernetFrame(packet, len);
 	switch(frame->GetType()){
 		case ARP_PACKET:
-			handle_arp(sr, frame, interface);
+			handle_arp_packet(sr, frame, interface);
 			break;
-		case IP_PACKET:
+		case IP_PACKET:{
 			cout << "IP packet" << endl;
-			break;
+			uint32_t dest = get_int(frame->GetPayload()+4*4);
+			cout << "Destination: " << dest << endl;
+			// NOTE: IP will be flipped inside longest_match to perform the look up
+			// for more detail see router-utils.h
+			struct sr_rt * entry = longest_match(sr->routing_table, dest);
+			if(entry){
+				struct sr_arpentry * arp_entry = sr_arpcache_lookup(&(sr->cache), entry->gw.s_addr);
+				if(arp_entry){
+					/* use next_hop_ip->mac mapping in entry to send the packet */
+					cout << "ARP entry found" << endl;
+					delete arp_entry;
+				}else{
+					struct sr_arpreq * req = sr_arpcache_queuereq(&(sr->cache), entry->gw.s_addr, packet, len, entry->interface);
+					require_arp(sr, req);
+				}
+			}else{
+				cerr << "Cannot reach destination" << endl;
+			}
+		}break;
 		default:
 			cerr << "Not a packet" << endl;
 	}
