@@ -25,6 +25,7 @@
 #include "ethernet.h"
 #include "router-utils.h"
 #include "arp-handler.h"
+#include "ip-handler.h"
 
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
@@ -109,8 +110,10 @@ void sr_handlepacket(struct sr_instance* sr,
 		case ARP_PACKET:
 			handle_arp_packet(sr, frame, interface);
 			break;
+
 		case IP_PACKET:{
-			cout << "IP packet" << endl;
+			
+			/*cout << "IP packet" << endl;
 			uint32_t dest = get_int(frame->GetPayload()+4*4);
 			cout << "Destination: " << dest << endl;
 			// NOTE: IP will be flipped inside longest_match to perform the look up
@@ -119,7 +122,6 @@ void sr_handlepacket(struct sr_instance* sr,
 			if(entry){
 				struct sr_arpentry * arp_entry = sr_arpcache_lookup(&(sr->cache), entry->gw.s_addr);
 				if(arp_entry){
-					/* use next_hop_ip->mac mapping in entry to send the packet */
 					cout << "ARP entry found" << endl;
 					delete arp_entry;
 				}else{
@@ -128,7 +130,8 @@ void sr_handlepacket(struct sr_instance* sr,
 				}
 			}else{
 				cerr << "Cannot reach destination" << endl;
-			}
+			}*/
+			handle_ip_packet(sr, frame, interface);
 		}break;
 		default:
 			cerr << "Not a packet" << endl;

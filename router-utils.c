@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <iostream>
 #include <string.h>
+#include <stdio.h>
 
 using namespace std;
 uint32_t get_int(uint8_t * point){
@@ -35,6 +36,7 @@ struct sr_if* interface_search_by_name(struct sr_if* list, char *search){
 
 struct sr_if * interface_match(struct sr_if * list, uint32_t ip){
 	if(list){
+	printf("LIST IP: %u\n",flip_ip(list->ip));
 		if(flip_ip(ip)==list->ip){
 			return list;
 		}else{
