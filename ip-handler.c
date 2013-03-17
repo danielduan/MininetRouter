@@ -13,6 +13,8 @@
 #include "router-utils.h" /* get_int, get_short, get_char */
 #include "sr_utils.h" /* checksum */
 #include "sr_rt.h" /* routing table */
+#include "arp-handler.h" /* arp request */
+#include "sr_arpcache.h" /* arp cache */
 
 using namespace std;
 
@@ -30,7 +32,7 @@ struct sr_if * router_ip_match(struct sr_if * list, uint32_t ip){
 	return NULL;
 }
 
-
+/*
 void create_icmp_packet(struct sr_instance* sr, sr_icmp_hdr_t *packet, unsigned int len, uint8_t type, uint8_t code) { //Still needs work........................
 	sr_icmp_t3_hdr_t *newICMP;
 	//unsigned int ICMPlen;
@@ -52,13 +54,10 @@ void create_icmp_packet(struct sr_instance* sr, sr_icmp_hdr_t *packet, unsigned 
 	}
 	
 	free(newICMP);
+}	
+	*/
 	
-void send_icmp_packet(struct sr_instance* sr,
-        sr_icmp_hdr_t* packet, 
-        unsigned int len, 
-        char* interface,
-        uint8_t type, 
-        uint8_t code) {
+void send_icmp_packet(struct sr_instance* sr, sr_icmp_hdr_t* packet, unsigned int len, char* interface,uint8_t type, uint8_t code) {
  
   /* ethernet header */
   sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*)packet; 
@@ -121,12 +120,12 @@ void send_icmp_packet(struct sr_instance* sr,
 void send_ip_packet(struct sr_instance* sr,
         uint8_t * packet,
         unsigned int len,
-        char* interface/* lent */,
+        char* interface,
         bool ICMP) {
   sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*)packet;  
   sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*)(eth_header+1);  
   /* check dest IP in routing table */ 
-  struct sr_rt* routing_index = check_rtable(sr, ntohl(ip_header->ip_dst));
+  struct sr_rt* routing_index = check_routingtable(sr, ntohl(ip_header->ip_dst));
   if (routing_index) {
     uint32_t next_hop_ip = ntohl(routing_index->gw.s_addr);
     char* next_hop_if = routing_index->interface;
@@ -148,12 +147,31 @@ void send_ip_packet(struct sr_instance* sr,
   } else {
     /* ICMP destination unreachable*/
     if (!ICMP) {
-      send_icmp(sr, packet, len, interface, 3, 0);
+      send_icmp_packet(sr, (sr_icmp_hdr_t*)packet, len, interface, 3, 0);
     }
   }
  
 }
 
+struct sr_rt* check_routingtable(struct sr_instance* sr, uint32_t ip) {
+  struct sr_rt* rt_pt = sr->routing_table;
+  struct sr_rt* routing_index = NULL;
+  bool is_matched = false;
+  while (rt_pt) {
+    if ( ntohl(rt_pt->dest.s_addr) == (ip & rt_pt->mask.s_addr)) {
+      if (is_matched) {
+        if (ntohl(rt_pt->mask.s_addr) > ntohl(routing_index->mask.s_addr)) {
+          routing_index = rt_pt;
+        }
+      } else {
+        is_matched = true;
+        routing_index = rt_pt;
+      }
+    }
+    rt_pt = rt_pt->next;
+  } 
+  return routing_index;
+}
 
 void handle_ip_packet(struct sr_instance * sr, EthernetFrame * frame, char * interface) {
 
@@ -193,7 +211,7 @@ void handle_ip_packet(struct sr_instance * sr, EthernetFrame * frame, char * int
 				printf("ERROR: ICMP-Not a valid echo request/reply.\n");
 				return;
 			}
-			else create_icmp_packet(sr, icmp_packet, icmpPacketLen, 0, 0);
+			else send_icmp_packet(sr, icmp_packet, icmpPacketLen, interface, 0, 0);
 		}
 		else {
 			printf("UDP/TCP\n");
@@ -202,9 +220,11 @@ void handle_ip_packet(struct sr_instance * sr, EthernetFrame * frame, char * int
 	}
 	else //printf("Daniel's Section\n");
 	{
-		send_ip_packet(sr, frame, len, interface, false);
+		send_ip_packet(sr, (uint8_t*)frame, len, interface, false);
 	}
-		
+	
+	
+	
 	/*****************************************************************/printf("###: Checkpoint 0\n");
 	
 }

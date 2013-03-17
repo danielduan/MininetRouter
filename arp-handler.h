@@ -15,4 +15,8 @@ void handle_arp_packet(struct sr_instance *, EthernetFrame *, char *);
 	there is no entry for the request passed
 */
 void require_arp(struct sr_instance *,  struct sr_arpreq *);
+/*
+	puts out arp requests i'm guessing? - Daniel
+*/
+void request_arp(struct sr_instance * sr, struct sr_arpreq * req);
 #endif
