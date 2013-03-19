@@ -91,6 +91,7 @@ void empty_request_queue(struct sr_instance * sr, struct sr_arpreq * req){
 	// PROCESS IP packets
 	sr_arpreq_destroy(&sr->cache, req);
 }
+
 void handle_arp_packet(struct sr_instance * sr, EthernetFrame * frame, char * interface){
 	sr_arp_hdr_t * arp = new_arp_packet(frame->GetPayload());
 	if(!arp){

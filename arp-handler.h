@@ -11,8 +11,8 @@
 void handle_arp_packet(struct sr_instance *, EthernetFrame *, char *);
 
 /**
-	require_arp: Sends responses back using data in cache, or sends arp request if
-	there is no entry for the request passed
+	require_arp: Called when there isn't an ARP entry to send a packet (sr_router.c)
+	Called every second in sr_arpcache_sweepreqs to resend or process already received
 */
 void require_arp(struct sr_instance *,  struct sr_arpreq *);
 /*
