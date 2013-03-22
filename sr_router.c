@@ -91,7 +91,30 @@ struct sr_arpreq {
     struct sr_packet *packets;  List of pkts waiting on this req to finish 
     struct sr_arpreq *next;
 };
+ff ff ff ff ff ff 
+00 a0 c9 22 b2 10 
+08 06 
+
+00 01 
+08 00 
+06 
+04 
+00 01 
+00 a0 c9 22 b2 10 
+ac 10 01 65 
+00 00 00 00 00 00 
+ac 10 01 32 
+00 00 00 00 00 00
 */
+
+
+void print_hex2(uint8_t * rawPacket, size_t payloadLength) {
+    for(size_t i = 0; i < payloadLength; i++) {
+        printf("%02x ", rawPacket[i]);
+        if(i&&i%32==0) printf("\n");
+    }
+    printf("\n");
+}
 
 void sr_handlepacket(struct sr_instance* sr,
         uint8_t * packet/* lent */,
@@ -103,16 +126,19 @@ void sr_handlepacket(struct sr_instance* sr,
 	assert(packet);
 	assert(interface);
 	printf("*** -> Received packet of length %d \n",len);
-
-	/* fill in code here */
+	
+	//print_hex2(packet, len);
 	EthernetFrame * frame = new EthernetFrame(packet, len);
 	switch(frame->GetType()){
-		case ARP_PACKET:
+		case ARP_PACKET:{
+			sr_arpcache_insert(&sr->cache, frame->GetPayload()+8, flip_ip(get_int(frame->GetPayload()+14)));
 			handle_arp_packet(sr, frame, interface);
 			break;
-		case IP_PACKET:
+		}case IP_PACKET:{
+			//
+			sr_arpcache_insert(&sr->cache, frame->GetPacket()+6, flip_ip(get_int(frame->GetPayload()+12)));
 			handle_ip_packet(sr, frame, interface);
-		break;
+		}break;
 		default:
 			cerr << "Not a packet" << endl;
 	}

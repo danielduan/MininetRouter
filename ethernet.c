@@ -95,11 +95,12 @@ EthernetFrame::~EthernetFrame(){
 	}
 }
 
-void print_hex(uint8_t *s, size_t len, size_t p_eth) {
-    for(size_t i = 0; i < len; i++) {
-        printf("%02x ", s[i]);
-        if(p_eth)
-        if(i==5||i==11||i==13||(i!=0&&i%32==0)) printf("\n");
+
+
+void EthernetFrame::print_hex() {
+    for(size_t i = 0; i < 14+payloadLength; i++) {
+        printf("%02x ", rawPacket[i]);
+        if(i&&i%32==0) printf("\n");
     }
     printf("\n");
 }

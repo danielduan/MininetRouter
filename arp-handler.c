@@ -61,7 +61,7 @@ sr_arp_hdr_t * new_arp_packet(uint8_t * payload){
 void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 	if(difftime(time(NULL), req->sent) > 1.0){
 		struct sr_if* interface = NULL;
-		struct sr_rt * entry = longest_match(sr->routing_table, req->ip);
+		struct sr_rt * entry = longest_match(sr->routing_table, req->ip); // flips ip
 		if(entry){
 			interface = interface_search_by_name(sr->if_list, entry->interface);
 			if(interface==NULL){
@@ -73,7 +73,7 @@ void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 			return;
 		}
 		sr_arp_hdr_t arp;
-		arp.ar_tip = flip_ip(req->ip);
+		arp.ar_tip = req->ip;
 		memcpy(arp.ar_sha, interface->addr, 6);
 		arp.ar_sip = interface->ip;
 		uint8_t * request = new_broadcast(&arp);
@@ -84,18 +84,18 @@ void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 		req->times_sent++;
 		delete request;
 	}else{
-		cerr << "ARP: Tried too soon, IP: " << flip_ip(req->ip) << endl;
+		cerr << "ARP: Tried too soon, IP: " << req->ip << endl;
 	}
 }
-
 void empty_request_queue(struct sr_instance * sr, struct sr_arpreq * req){
 	cout << "ARP: Processing packet queue" << endl;
 	struct sr_packet * packet;
-	//EthernetFrame * frame;
+	EthernetFrame * frame;
 	for (packet = req->packets; packet != NULL; packet = packet->next) {
-		/*frame = new EthernetFrame(packet->buf, packet->len);
+		frame = new EthernetFrame(packet->buf, packet->len);
 		handle_ip_packet(sr, frame, packet->iface);
-		delete frame;*/
+		//send_ip_packet(sr, frame, len, packet->iface, true);
+		delete frame;
 	}
 	sr_arpreq_destroy(&sr->cache, req);
 }
@@ -112,18 +112,15 @@ void handle_arp_packet(struct sr_instance * sr, EthernetFrame * frame, char * in
 		if(i_entry){
 			cout << "ARP: Destined to router interface" << endl;
 			memcpy(arp->ar_tha, arp->ar_sha, 6);
-			arp->ar_tip = flip_ip(arp->ar_sip);
+			arp->ar_tip = arp->ar_sip;
 			memcpy(arp->ar_sha, i_entry->addr, 6);
 			arp->ar_sip = i_entry->ip;
 			uint8_t * response = new_arp_response(arp);
 			cout << "ARP: Responding" <<endl;
 			sr_send_packet(sr, response, 42, i_entry->name);
-			cout << "ARP: Caching" << endl;
-			struct sr_arpreq * req = sr_arpcache_insert(&sr->cache, arp->ar_tha, flip_ip(arp->ar_tip));
-			if(req){ // there may be a queue for this client
-				empty_request_queue(sr, req);
-			}
 			delete response;
+		}else{
+			cerr << "ARP is not for any of the router interfaces" << endl;
 		}
 	}else if(arp->ar_op==2){
 		cout << "ARP: Response" << endl;
@@ -131,6 +128,7 @@ void handle_arp_packet(struct sr_instance * sr, EthernetFrame * frame, char * in
 		if(req){
 			empty_request_queue(sr, req);
 		}else{
+			cout << "Source IP: " << arp->ar_sip <<endl;
 			cerr << "ARP: Response dind't find a packet queue" << endl;
 		}
 	}else{

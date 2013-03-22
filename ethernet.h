@@ -28,7 +28,7 @@ class EthernetFrame{
 	enum packet_type type;
 	public:
 	
-	/**
+	/** uint8_t *s, size_t len, size_t p_eth
 		Constructor: packet, length
 		-- Parse received packet
 	*/
@@ -78,8 +78,8 @@ class EthernetFrame{
 		IsValid: returns a flag, true if the there are no errors in the packet represented by this object
 	*/
 	int IsValid();
+	
+	void print_hex();
 };
-
-void print_hex(uint8_t *s, size_t len, size_t p_eth);
 
 #endif

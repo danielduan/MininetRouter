@@ -34,9 +34,8 @@ struct sr_if* interface_search_by_name(struct sr_if* list, char *search){
 	return NULL;
 }
 
-struct sr_if * interface_match(struct sr_if * list, uint32_t ip){
+struct sr_if * interface_match(struct sr_if * list, uint32_t ip){// flips
 	if(list){
-	printf("LIST IP: %u\n",flip_ip(list->ip));
 		if(flip_ip(ip)==list->ip){
 			return list;
 		}else{
@@ -69,5 +68,5 @@ struct sr_rt* longest_match_aux(struct sr_rt* routing_table, uint32_t ip, struct
 }
 
 struct sr_rt* longest_match(struct sr_rt* routing_table, uint32_t ip){
-	return longest_match_aux(routing_table, flip_ip(ip), NULL);
+	return longest_match_aux(routing_table, ip, NULL);
 }
