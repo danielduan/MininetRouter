@@ -57,12 +57,11 @@ void create_icmp_packet(struct sr_instance* sr, sr_icmp_hdr_t *packet, unsigned 
 }	
 	*/
 	
-void send_icmp_packet(struct sr_instance* sr, sr_icmp_hdr_t* packet, unsigned int len, char* interface,uint8_t type, uint8_t code) {
+void send_icmp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface, uint8_t type, uint8_t code) {
  
   /* ethernet header */
-  sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*)packet; 
   /* ip header */
-  sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*)(eth_header+1); 
+  sr_ip_hdr_t * ip_header = (sr_ip_hdr_t*)(packet);
   /* outgoing interface */
   struct sr_if* out_if = sr_get_interface(sr, interface); 
   
@@ -102,6 +101,10 @@ void send_icmp_packet(struct sr_instance* sr, sr_icmp_hdr_t* packet, unsigned in
   new_ip_header->ip_dst = ip_header->ip_src;
   new_ip_header->ip_ttl = 0x40;
   new_ip_header->ip_p = ip_protocol_icmp;
+  new_ip_header->ip_dst = ntohl(new_ip_header->ip_dst);
+  
+  cout << "IP Header src: " << new_ip_header->ip_src << endl;
+  cout << "IP Header dest: " << new_ip_header->ip_dst << endl;
   
   new_ip_header->ip_sum = 0;
   new_ip_header->ip_sum = cksum(new_ip_header, sizeof(sr_ip_hdr_t));  
@@ -111,27 +114,33 @@ void send_icmp_packet(struct sr_instance* sr, sr_icmp_hdr_t* packet, unsigned in
   new_eth_header->ether_type = htons(ethertype_ip);  
   
   /* send ICMP packet*/
-  send_ip_packet(sr, icmp_pkt, total_len, interface, true);
+  EthernetFrame * frame = new EthernetFrame(icmp_pkt, total_len);
+  send_ip_packet(sr, frame, total_len, interface, true);
+  delete frame;
   /* free extra memory */
   free(icmp_pkt);
 }
 
 
 void send_ip_packet(struct sr_instance* sr,
-        uint8_t * packet,
+        EthernetFrame * frame,
         unsigned int len,
         char* interface,
         bool ICMP) {
-  sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*)packet;  
-  sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*)(eth_header+1);  
-  /* check dest IP in routing table */ 
-  struct sr_rt* routing_index = check_routingtable(sr, ntohl(ip_header->ip_dst));
+	uint8_t * packet = frame->GetPayload();
+  sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*)packet;
+  //uint32_t dest = get_int(frame->GetPayload()+4*4);
+  //sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*)(eth_header+1);  
+  /* check dest IP in routing table */
+  cout << "IP: " << ntohl(get_int(packet+4*4)) << endl;
+  struct sr_rt* routing_index = check_routingtable(sr, ntohl(get_int(packet+4*4)));
   if (routing_index) {
+  	cout << "Route index" << endl;
     uint32_t next_hop_ip = ntohl(routing_index->gw.s_addr);
     char* next_hop_if = routing_index->interface;
     /* check ARP in cache */
     struct sr_arpentry *entry = sr_arpcache_lookup(&sr->cache, next_hop_ip);
-    if (entry && entry->valid) {
+    if (entry ) { // && entry->valid
       struct sr_if* out_if = sr_get_interface(sr, next_hop_if);
       /* update ethernet header */
       memcpy(eth_header->ether_shost, out_if->addr, ETHER_ADDR_LEN);
@@ -140,14 +149,21 @@ void send_ip_packet(struct sr_instance* sr,
       sr_send_packet(sr, packet, len, next_hop_if);
     } else {
       /* save packet in the request queue */
+      cout << "IP next hop: " << next_hop_ip<< endl;
       struct sr_arpreq * req =  sr_arpcache_queuereq(&sr->cache, next_hop_ip, packet, len, next_hop_if);
-      request_arp(sr, req);
+      cout << "Packet queued"<< endl;
+      require_arp(sr, req);
     }
     free(entry);
   } else {
+  		cout << "No route" << endl;
     /* ICMP destination unreachable*/
     if (!ICMP) {
-      send_icmp_packet(sr, (sr_icmp_hdr_t*)packet, len, interface, 3, 0);
+    cout << "Sending ICMP Unreachable" << endl;
+    	
+      send_icmp_packet(sr, packet, len, interface, 3, 0);
+    }else{
+    	cout << "No ICMP" << endl;
     }
   }
  
@@ -201,7 +217,7 @@ void handle_ip_packet(struct sr_instance * sr, EthernetFrame * frame, char * int
 	struct sr_if * i_entry = router_ip_match(sr->if_list, packet->ip_dst);
 	
 	if(i_entry){
-		printf("Kunaal's Section\n");
+		/* printf("Kunaal's Section\n");
 		if (packet->ip_p == ip_protocol_icmp) {
 			sr_icmp_hdr_t *icmp_packet =(sr_icmp_hdr_t *)((uint8_t *)packet + ((packet->ip_hl)* 4));
 			int icmpPacketLen = len - ((packet->ip_hl)* 4);
@@ -216,16 +232,12 @@ void handle_ip_packet(struct sr_instance * sr, EthernetFrame * frame, char * int
 		else {
 			printf("UDP/TCP\n");
 		
-		}
+		}*/
 	}
-	else //printf("Daniel's Section\n");
-	{
-		send_ip_packet(sr, (uint8_t*)frame, len, interface, false);
+	else{
+		cout << "Not for the router" << endl;
+		send_ip_packet(sr, frame, len, interface, false);
 	}
-	
-	
-	
-	/*****************************************************************/printf("###: Checkpoint 0\n");
 	
 }
 

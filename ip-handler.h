@@ -17,7 +17,7 @@ struct sr_if * router_ip_match(struct sr_if *, uint32_t);
 
 void handle_ip_packet(struct sr_instance *, EthernetFrame *, char *);
 
-void send_ip_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface, bool ICMP);
+void send_ip_packet(struct sr_instance* sr, EthernetFrame * frame, unsigned int len, char* interface, bool ICMP);
 
 struct sr_rt* check_routingtable(struct sr_instance* sr, uint32_t ip);
 

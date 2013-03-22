@@ -110,29 +110,9 @@ void sr_handlepacket(struct sr_instance* sr,
 		case ARP_PACKET:
 			handle_arp_packet(sr, frame, interface);
 			break;
-
-		case IP_PACKET:{
-			
-			/*cout << "IP packet" << endl;
-			uint32_t dest = get_int(frame->GetPayload()+4*4);
-			cout << "Destination: " << dest << endl;
-			// NOTE: IP will be flipped inside longest_match to perform the look up
-			// for more detail see router-utils.h
-			struct sr_rt * entry = longest_match(sr->routing_table, dest);
-			if(entry){
-				struct sr_arpentry * arp_entry = sr_arpcache_lookup(&(sr->cache), entry->gw.s_addr);
-				if(arp_entry){
-					cout << "ARP entry found" << endl;
-					delete arp_entry;
-				}else{
-					struct sr_arpreq * req = sr_arpcache_queuereq(&(sr->cache), entry->gw.s_addr, packet, len, entry->interface);
-					require_arp(sr, req);
-				}
-			}else{
-				cerr << "Cannot reach destination" << endl;
-			}*/
+		case IP_PACKET:
 			handle_ip_packet(sr, frame, interface);
-		}break;
+		break;
 		default:
 			cerr << "Not a packet" << endl;
 	}

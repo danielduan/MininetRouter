@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "ip-handler.h" /*handle_ip_packet*/
 #include "arp-handler.h" /* prototypes */
 #include "ethernet.h" /* EthernetFrame */
 #include "sr_router.h" /* sr_instance */
@@ -60,7 +61,7 @@ sr_arp_hdr_t * new_arp_packet(uint8_t * payload){
 void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 	if(difftime(time(NULL), req->sent) > 1.0){
 		struct sr_if* interface = NULL;
-		struct sr_rt * entry = longest_match(sr->routing_table, flip_ip(req->ip));
+		struct sr_rt * entry = longest_match(sr->routing_table, req->ip);
 		if(entry){
 			interface = interface_search_by_name(sr->if_list, entry->interface);
 			if(interface==NULL){
@@ -72,11 +73,12 @@ void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 			return;
 		}
 		sr_arp_hdr_t arp;
-		arp.ar_tip = req->ip;
+		arp.ar_tip = flip_ip(req->ip);
 		memcpy(arp.ar_sha, interface->addr, 6);
 		arp.ar_sip = interface->ip;
 		uint8_t * request = new_broadcast(&arp);
 		cout << "ARP: Requesting, IP: "<< arp.ar_tip << ", Try number: " << req->times_sent << endl;
+		cout << "Interface: "<< interface->name << endl;
 		sr_send_packet(sr, request, 42, interface->name);
 		req->sent = time(NULL);
 		req->times_sent++;
@@ -88,7 +90,13 @@ void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 
 void empty_request_queue(struct sr_instance * sr, struct sr_arpreq * req){
 	cout << "ARP: Processing packet queue" << endl;
-	// PROCESS IP packets
+	struct sr_packet * packet;
+	//EthernetFrame * frame;
+	for (packet = req->packets; packet != NULL; packet = packet->next) {
+		/*frame = new EthernetFrame(packet->buf, packet->len);
+		handle_ip_packet(sr, frame, packet->iface);
+		delete frame;*/
+	}
 	sr_arpreq_destroy(&sr->cache, req);
 }
 
@@ -119,7 +127,7 @@ void handle_arp_packet(struct sr_instance * sr, EthernetFrame * frame, char * in
 		}
 	}else if(arp->ar_op==2){
 		cout << "ARP: Response" << endl;
-		struct sr_arpreq * req = sr_arpcache_insert(&sr->cache, arp->ar_sha, flip_ip(arp->ar_sip));
+		struct sr_arpreq * req = sr_arpcache_insert(&sr->cache, arp->ar_sha, arp->ar_sip);
 		if(req){
 			empty_request_queue(sr, req);
 		}else{
