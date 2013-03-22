@@ -131,12 +131,12 @@ void sr_handlepacket(struct sr_instance* sr,
 	EthernetFrame * frame = new EthernetFrame(packet, len);
 	switch(frame->GetType()){
 		case ARP_PACKET:{
-			sr_arpcache_insert(&sr->cache, frame->GetPayload()+8, flip_ip(get_int(frame->GetPayload()+14)));
+			sr_arpcache_insert(&sr->cache, frame->GetSrcAddress(), flip_ip(get_int(frame->GetPayload()+12)));
 			handle_arp_packet(sr, frame, interface);
 			break;
 		}case IP_PACKET:{
 			//
-			sr_arpcache_insert(&sr->cache, frame->GetPacket()+6, flip_ip(get_int(frame->GetPayload()+12)));
+			sr_arpcache_insert(&sr->cache, frame->GetSrcAddress(), flip_ip(get_int(frame->GetPayload()+12)));
 			handle_ip_packet(sr, frame, interface);
 		}break;
 		default:
