@@ -1,0 +1,73 @@
+
+
+void send_icmp_packet(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface, uint8_t type, uint8_t code) {
+ 
+  /* ethernet header */
+  /* ip header */
+  sr_ip_hdr_t * ip_header = (sr_ip_hdr_t*)(packet);
+  /* outgoing interface */
+  struct sr_if* out_if = sr_get_interface(sr, interface); 
+  
+  uint8_t icmp_len;
+  uint8_t payload_len;
+  /* echo reply */
+  if (type == 0) {
+    icmp_len = ntohs(ip_header->ip_len) - sizeof(sr_ip_hdr_t );    
+    payload_len = icmp_len - sizeof(sr_icmp_hdr_t) - 4;
+  } else {
+    icmp_len = sizeof(sr_icmp_t3_hdr_t);
+    payload_len = ICMP_DATA_SIZE;
+  }
+  
+  uint8_t total_len = sizeof(sr_ethernet_hdr_t)+sizeof(sr_ip_hdr_t)+icmp_len;
+  uint8_t* icmp_pkt = (uint8_t*)malloc(total_len); 
+   
+  /* generate ICMP header */  
+  sr_icmp_t3_hdr_t* icmp_header = (sr_icmp_t3_hdr_t*)(icmp_pkt+sizeof(sr_ethernet_hdr_t)+sizeof(sr_ip_hdr_t));
+  
+  memcpy(icmp_header, ip_header+1, icmp_len);
+  icmp_header->icmp_type = type;
+  icmp_header->icmp_code = code;    
+  icmp_header->icmp_sum = 0;
+  /* not echo reply */
+  if (type!=0) {
+    memcpy(icmp_header->data, ip_header, payload_len);
+  }
+  icmp_header->icmp_sum = cksum(icmp_header, sizeof(sr_icmp_t3_hdr_t)); 
+  
+  /* generate IP packet */
+  sr_ip_hdr_t* new_ip_header = (sr_ip_hdr_t*)(icmp_pkt+sizeof(sr_ethernet_hdr_t));
+  memcpy(new_ip_header, ip_header, sizeof(sr_ip_hdr_t));
+  uint16_t pk_len = sizeof(sr_ip_hdr_t)+ icmp_len;
+  new_ip_header->ip_len = htons(pk_len);
+  new_ip_header->ip_src = out_if->ip;
+  new_ip_header->ip_dst = ip_header->ip_src;
+  new_ip_header->ip_ttl = 0x40;
+  new_ip_header->ip_p = ip_protocol_icmp;
+  //new_ip_header->ip_dst = ntohl(new_ip_header->ip_dst);
+  
+  cout << "IP Header src: " << new_ip_header->ip_src << endl;
+  cout << "IP Header dest: " << new_ip_header->ip_dst << endl;
+  
+  new_ip_header->ip_sum = 0;
+  new_ip_header->ip_sum = cksum(new_ip_header, sizeof(sr_ip_hdr_t));  
+
+  /* generate Ethernet frame*/
+  sr_ethernet_hdr_t* new_eth_header = (sr_ethernet_hdr_t*)icmp_pkt;
+  new_eth_header->ether_type = htons(ethertype_ip);  
+  
+  /* send ICMP packet*/
+  EthernetFrame * frame = new EthernetFrame(icmp_pkt, total_len);
+  send_ip_packet(sr, frame, total_len, interface, true);
+  delete frame;
+  /* free extra memory */
+  free(icmp_pkt);
+}
+/**
+struct sr_arpentry {
+    unsigned char mac[6]; 
+    uint32_t ip;               IP addr in network byte order 
+    time_t added;         
+    int valid;
+};
+*/

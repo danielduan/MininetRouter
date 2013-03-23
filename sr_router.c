@@ -71,41 +71,6 @@ void sr_init(struct sr_instance* sr)
  *
  *---------------------------------------------------------------------*/
 
-/**
-struct sr_rt
-{
-    struct in_addr dest;
-    struct in_addr gw;
-    struct in_addr mask;
-    char   interface[sr_IFACE_NAMELEN];
-    struct sr_rt* next;
-};
-
-struct sr_arpreq {
-    uint32_t ip;
-    time_t sent;              Last time this ARP request was sent. You 
-                                   should update this. If the ARP request was 
-                                   never sent, will be 0. 
-    uint32_t times_sent;        Number of times this request was sent. You 
-                                   should update this. 
-    struct sr_packet *packets;  List of pkts waiting on this req to finish 
-    struct sr_arpreq *next;
-};
-ff ff ff ff ff ff 
-00 a0 c9 22 b2 10 
-08 06 
-
-00 01 
-08 00 
-06 
-04 
-00 01 
-00 a0 c9 22 b2 10 
-ac 10 01 65 
-00 00 00 00 00 00 
-ac 10 01 32 
-00 00 00 00 00 00
-*/
 
 
 void print_hex2(uint8_t * rawPacket, size_t payloadLength) {

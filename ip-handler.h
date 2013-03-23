@@ -23,4 +23,5 @@ struct sr_rt* check_routingtable(struct sr_instance* sr, uint32_t ip);
 
 struct packet_t * new_icmp_packet(packet_t, uint8_t, uint8_t);
 
+void route_packet(struct sr_instance *, EthernetFrame *, char *);
 #endif

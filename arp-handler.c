@@ -61,7 +61,7 @@ sr_arp_hdr_t * new_arp_packet(uint8_t * payload){
 void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 	if(difftime(time(NULL), req->sent) > 1.0){
 		struct sr_if* interface = NULL;
-		struct sr_rt * entry = longest_match(sr->routing_table, req->ip); // flips ip
+		struct sr_rt * entry = longest_match(sr->routing_table, flip_ip(req->ip)); // flips ip
 		if(entry){
 			interface = interface_search_by_name(sr->if_list, entry->interface);
 			if(interface==NULL){
@@ -73,7 +73,7 @@ void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 			return;
 		}
 		sr_arp_hdr_t arp;
-		arp.ar_tip = req->ip;
+		arp.ar_tip = flip_ip(req->ip);
 		memcpy(arp.ar_sha, interface->addr, 6);
 		arp.ar_sip = interface->ip;
 		uint8_t * request = new_broadcast(&arp);
@@ -87,14 +87,14 @@ void request_arp(struct sr_instance * sr, struct sr_arpreq * req){
 		cerr << "ARP: Tried too soon, IP: " << req->ip << endl;
 	}
 }
+
 void empty_request_queue(struct sr_instance * sr, struct sr_arpreq * req){
 	cout << "ARP: Processing packet queue" << endl;
 	struct sr_packet * packet;
 	EthernetFrame * frame;
 	for (packet = req->packets; packet != NULL; packet = packet->next) {
 		frame = new EthernetFrame(packet->buf, packet->len);
-		handle_ip_packet(sr, frame, packet->iface);
-		//send_ip_packet(sr, frame, len, packet->iface, true);
+		route_packet(sr, frame, packet->iface);
 		delete frame;
 	}
 	sr_arpreq_destroy(&sr->cache, req);
