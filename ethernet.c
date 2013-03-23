@@ -34,7 +34,7 @@ EthernetFrame::EthernetFrame(uint8_t * packet, size_t len){
 	payload = packet+14;
 }
 
-EthernetFrame::EthernetFrame(uint8_t * dest, uint8_t * source, uint8_t * payload, size_t length, enum packet_type it){
+EthernetFrame::EthernetFrame(uint8_t * dest, uint8_t * source, uint8_t * payload, size_t length, enum packet_type it){	
 	rawPacket = NULL;
 	memcpy(destination,dest,6);
 	memcpy(this->source, source, 6);
@@ -42,6 +42,7 @@ EthernetFrame::EthernetFrame(uint8_t * dest, uint8_t * source, uint8_t * payload
 	memcpy(this->payload, payload, length);
 	payloadLength = length;
 	this->type = it;
+	rawPacket = GetPacket();
 }
 
 uint8_t * EthernetFrame::GetPacket(){
@@ -98,6 +99,7 @@ EthernetFrame::~EthernetFrame(){
 
 
 void EthernetFrame::print_hex() {
+	cout << "Working Print hex" << endl;
     for(size_t i = 0; i < 14+payloadLength; i++) {
         printf("%02x ", rawPacket[i]);
         if(i&&i%32==0) printf("\n");

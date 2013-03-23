@@ -122,9 +122,27 @@ struct packet_t * new_ip_packet(struct sr_instance * sr, sr_ip_hdr_t * ip_packet
 	str_ret -> length = len_i;
 	return str_ret;
 }
+/*
+b2 72 65 ba 90 e6 
+4e d1 12 c7 5b a1 
+08 00 
 
+45 00 00 38 00 00 40 00 24 01 
+88 b8 c0 a8 02 01 0a 00 01 64 
+
+0b 
+01 
+1d ea 
+00 28 e9 c8
+ 
+45 00 00 3c 9d 14 00 00 00 11 
+00 00 0a 00 01 64 c0 a8 02 02 
+
+d0 27 82 9a 00 28 e9 c8 
+*/
 void send_ip_packet(struct sr_instance* sr, EthernetFrame * frame, char * interface) {
     struct sr_if * i_entry = interface_search_by_name(sr->if_list, interface);
+    frame->print_hex();
     packet_t raw_ip;
 	raw_ip.packet = frame->GetPayload();
 	raw_ip.length = frame->PayloadLength();
@@ -140,9 +158,16 @@ void send_ip_packet(struct sr_instance* sr, EthernetFrame * frame, char * interf
 			ip_packet->ip_ttl--;
 			if(ip_packet->ip_ttl<1){
 				cerr << "TTL Exceded" << endl;
+				packet->ip_dst = packet->ip_src; //flip_ip();
+				packet->ip_src = ;
 				struct packet_t * icmp = new_icmp_packet(&raw_ip, 11, 1);
 				struct packet_t * ip_packet = new_ip_packet(sr, packet, icmp, interface);
-				EthernetFrame * the_frame = new EthernetFrame(frame->GetSrcAddress(), frame->GetDestAddress(), ip_packet->packet, ip_packet->length, IP_PACKET);
+				EthernetFrame * the_frame = new EthernetFrame(frame->GetSrcAddress(), 
+																frame->GetDestAddress(), 
+																ip_packet->packet, 
+																ip_packet->length, 
+																IP_PACKET);
+				the_frame -> print_hex();
 				sr_send_packet(sr, the_frame->GetPacket(), the_frame->PayloadLength()+14, interface);
 				if(the_frame)
 					delete the_frame;
@@ -157,12 +182,20 @@ void send_ip_packet(struct sr_instance* sr, EthernetFrame * frame, char * interf
 			}else{
 				cout << "Sending packet now through interface " << interface <<endl;
 				ip_packet -> ip_sum = 0;
-				ip_packet -> ip_sum  = cksum(frame->GetPayload(), frame->PayloadLength());
+				int correct;
+				ip_packet -> ip_sum  = cksum(frame->GetPayload(),20);
+				correct = ip_packet -> ip_sum;
 				EthernetFrame * the_frame = new EthernetFrame(entry->mac,
 															i_entry->addr,
 															frame->GetPayload(),
 															frame->PayloadLength(), 
 															IP_PACKET);
+															
+				int new_chk = cksum(the_frame->GetPayload(), 20);
+				if(new_chk!=correct){
+					uint8_t * tmp_packet = the_frame->GetPayload();
+					memcpy(tmp_packet+10, &(correct), 2);
+				}
 				sr_send_packet(sr, the_frame->GetPacket(), the_frame->PayloadLength()+14, interface);
 				delete the_frame;
 			}
@@ -275,6 +308,10 @@ void handle_ip_packet(struct sr_instance * sr, EthernetFrame * frame, char * int
 	packet_t raw_ip;
 	raw_ip.packet = IP_payload;
 	raw_ip.length = frame->PayloadLength();
+	cout << "Packet from client" << endl;
+	frame->print_hex();
+	cout << "b" << endl;
+	print_hex(raw_ip.packet, raw_ip.length);
    if (len < 20) {
 		printf("ERROR: Incomplete IP packet received.\n");
 		return;
@@ -282,6 +319,7 @@ void handle_ip_packet(struct sr_instance * sr, EthernetFrame * frame, char * int
 		cout << "IP: Correct length"<< endl;
 	}
 	uint16_t oldCheckSum = packet->ip_sum;
+	cout << oldCheckSum << endl;
 	packet->ip_sum = 0;
 	uint16_t newCheckSum = cksum(packet,(packet->ip_hl)*4);
 	if (oldCheckSum != newCheckSum) {
