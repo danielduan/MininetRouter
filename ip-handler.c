@@ -48,9 +48,12 @@ void print_hex(uint8_t * rawPacket, size_t payloadLength) {
 }
 
 struct packet_t * new_icmp_packet(packet_t * raw_ip, uint8_t type, uint8_t code) {
+	cout << "RAW IP PACKET" << endl;
+	print_hex(raw_ip->packet, raw_ip->length);
 	sr_ip_hdr_t * ip_header = (sr_ip_hdr_t *) raw_ip->packet;
 	uint8_t empty[] = {0x00, 0x00};
 	uint8_t * ret;
+	uint16_t tmp;
 	uint16_t len;
 	switch(type){
 		case 0:{
@@ -63,6 +66,7 @@ struct packet_t * new_icmp_packet(packet_t * raw_ip, uint8_t type, uint8_t code)
 			memcpy(ret+6, raw_ip->packet+20+6, 2);
 			memcpy(ret+8, raw_ip->packet+20+8, len-8);
 			uint16_t tmp = cksum(ret, len);
+			cout << "ICMP Checksum: " << tmp << endl;
 			memcpy(ret+2, (void *)(&tmp), 2);
 		}
 		break;
@@ -77,11 +81,14 @@ struct packet_t * new_icmp_packet(packet_t * raw_ip, uint8_t type, uint8_t code)
 			memcpy(ret, (void *)(&type), 1);
 			memcpy(ret+1, (void *)(&code), 1);
 			memcpy(ret+2, empty, 2);
-			memcpy(ret+4, raw_ip->packet+20+4, 2);
-			memcpy(ret+6, raw_ip->packet+20+6, 2);
+			memcpy(ret+4, empty, 2);
+			memcpy(ret+6, empty, 2);
 			memcpy(ret+8, raw_ip->packet, 20);
 			memcpy(ret+28, raw_ip->packet+20, 8);
-			uint16_t tmp = cksum(ret, len);
+			tmp = cksum(raw_ip->packet, 20);
+			memcpy(ret+8+10, (void *)(&tmp), 2);
+			
+			tmp = cksum(ret, len);
 			memcpy(ret+2, (void *)(&tmp), 2);
 		}
 		break;
@@ -114,7 +121,7 @@ struct packet_t * new_ip_packet(struct sr_instance * sr, sr_ip_hdr_t * ip_packet
 	
 	memcpy(the_packet, part1, 20);
 	memcpy(the_packet+20, icmp_packet->packet, icmp_packet->length);
-	uint16_t tmp = cksum(the_packet, len_i);
+	uint16_t tmp = cksum(the_packet, 20);
 	memcpy(the_packet+10, (void *)(&tmp), 2);
 	
 	struct packet_t * str_ret = new struct packet_t;
@@ -122,27 +129,8 @@ struct packet_t * new_ip_packet(struct sr_instance * sr, sr_ip_hdr_t * ip_packet
 	str_ret -> length = len_i;
 	return str_ret;
 }
-/*
-b2 72 65 ba 90 e6 
-4e d1 12 c7 5b a1 
-08 00 
 
-45 00 00 38 00 00 40 00 24 01 
-88 b8 c0 a8 02 01 0a 00 01 64 
-
-0b 
-01 
-1d ea 
-00 28 e9 c8
- 
-45 00 00 3c 9d 14 00 00 00 11 
-00 00 0a 00 01 64 c0 a8 02 02 
-
-d0 27 82 9a 00 28 e9 c8 
-*/
 void send_ip_packet(struct sr_instance* sr, EthernetFrame * frame, char * interface) {
-    struct sr_if * i_entry = interface_search_by_name(sr->if_list, interface);
-    frame->print_hex();
     packet_t raw_ip;
 	raw_ip.packet = frame->GetPayload();
 	raw_ip.length = frame->PayloadLength();
@@ -151,15 +139,16 @@ void send_ip_packet(struct sr_instance* sr, EthernetFrame * frame, char * interf
 	cout << "Sending to IP: " << next_hop_ip << endl;
   	struct sr_rt* routing_index = longest_match(sr->routing_table, flip_ip(next_hop_ip));
   	if(routing_index){
+  		struct sr_if * i_entry = interface_search_by_name(sr->if_list, routing_index->interface);
 		cout << "Routing index found" << endl;
 		struct sr_arpentry * entry = sr_arpcache_lookup(&sr->cache, next_hop_ip);
 		if (entry){
 			sr_ip_hdr_t * ip_packet = (sr_ip_hdr_t *)frame->GetPayload();
 			ip_packet->ip_ttl--;
 			if(ip_packet->ip_ttl<1){
-				cerr << "TTL Exceded" << endl;
-				packet->ip_dst = packet->ip_src; //flip_ip();
-				packet->ip_src = ;
+				cerr << "========== TTL Exceded" << endl;
+				entry = sr_arpcache_lookup(&sr->cache, packet->ip_src);
+				packet->ip_dst =  flip_ip(i_entry->ip);
 				struct packet_t * icmp = new_icmp_packet(&raw_ip, 11, 1);
 				struct packet_t * ip_packet = new_ip_packet(sr, packet, icmp, interface);
 				EthernetFrame * the_frame = new EthernetFrame(frame->GetSrcAddress(), 
@@ -167,7 +156,6 @@ void send_ip_packet(struct sr_instance* sr, EthernetFrame * frame, char * interf
 																ip_packet->packet, 
 																ip_packet->length, 
 																IP_PACKET);
-				the_frame -> print_hex();
 				sr_send_packet(sr, the_frame->GetPacket(), the_frame->PayloadLength()+14, interface);
 				if(the_frame)
 					delete the_frame;
@@ -242,6 +230,7 @@ struct sr_ip_hdr_bb{
 
 //
 void route_packet(struct sr_instance * sr, EthernetFrame * frame, char * interface){
+	cout << "HEADER RECEIVED" << endl;
 	uint8_t *IP_payload = frame->GetPayload();
 	sr_ip_hdr_t *packet = (sr_ip_hdr_t *)IP_payload;
 	packet_t raw_ip;
@@ -348,7 +337,27 @@ void handle_ip_packet(struct sr_instance * sr, EthernetFrame * frame, char * int
 			}
 		}
 		else {
-			printf("UDP/TCP\n");
+		struct sr_arpentry * a_entry;
+			a_entry = sr_arpcache_lookup(&sr->cache, packet->ip_src);
+		if(a_entry){
+			cout << "ARP entry found, sending ICMP" << endl;
+			struct packet_t * icmp = new_icmp_packet(&raw_ip, 3, 1);
+			struct packet_t * ip_packet = new_ip_packet(sr, packet, icmp, interface);
+			EthernetFrame * the_frame = new EthernetFrame(frame->GetSrcAddress(), frame->GetDestAddress(), ip_packet->packet, ip_packet->length, IP_PACKET);
+			sr_send_packet(sr, the_frame->GetPacket(), the_frame->PayloadLength()+14, interface);
+			if(icmp -> packet)
+			delete icmp -> packet;
+			if(ip_packet -> packet)
+			delete ip_packet -> packet;
+			if(icmp)
+			delete icmp;
+			if(ip_packet)
+			delete ip_packet;
+			if(the_frame)
+			delete the_frame;
+		}else{
+			cerr << "No ARP entry found for recently connected client" << endl;
+		}
 		}
 	}
 	else{

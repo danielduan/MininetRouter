@@ -137,6 +137,8 @@ void handle_arp_packet(struct sr_instance * sr, EthernetFrame * frame, char * in
 	delete arp;
 }
 
+
+
 void require_arp(struct sr_instance * sr,  struct sr_arpreq * req){
 	struct sr_arpentry * entry = sr_arpcache_lookup(&(sr->cache), req->ip);
 	if(entry){
@@ -145,7 +147,7 @@ void require_arp(struct sr_instance * sr,  struct sr_arpreq * req){
 	}else{
 		if(req->times_sent>=5){
 			cerr << "ARP: timeout, request already sent five times" << endl;
-			// struct packet_t * new_icmp_packet(packet_t, uint8_t, uint8_t);
+			
 			sr_arpreq_destroy(&sr->cache, req);
 		}else{
 			request_arp(sr, req);
